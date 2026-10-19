@@ -1,0 +1,12 @@
+[submodule "external/iPlug2"]
+	path = external/iPlug2
+	url = https://github.com/iPlug2/iPlug2.git
+[submodule "external/vst3sdk"]
+	path = external/vst3sdk
+	url = https://github.com/steinbergmedia/vst3sdk.git
+[submodule "external/clap"]
+	path = external/clap
+	url = https://github.com/free-audio/clap.git
+[submodule "external/clap-helpers"]
+	path = external/clap-helpers
+	url = https://github.com/free-audio/clap-helpers.git

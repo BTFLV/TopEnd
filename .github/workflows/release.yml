@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  release:
+    name: Build and publish (macOS, Apple Silicon)
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Check that the tag matches the project version
+        run: |
+          version=$(sed -n 's/^project(TopEnd VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match project version $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Install build tools
+        run: brew install ninja
+
+      - name: Connect pinned SDKs
+        run: python3 tools/bootstrap.py
+
+      - name: Build and test the DSP core
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: Build AUv2, VST3 and CLAP
+        run: |
+          cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DTOPEND_BUILD_PLUGINS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build-release
+
+      # Signing is optional. With a Developer ID certificate the plugins are
+      # signed; with an App Store Connect API key they are also notarized.
+      # Without these secrets the release is built and published ad-hoc signed.
+      - name: Configure signing
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_SIGNING_IDENTITY" ]; then
+            echo "No signing certificate configured; the plugins are ad-hoc signed."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password=$(openssl rand -base64 24)
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain"
+          rm "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" \
+            "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY" >> "$GITHUB_ENV"
+          if [ -n "$APPLE_API_KEY" ] && [ -n "$APPLE_API_ISSUER" ] && [ -n "$APPLE_API_KEY_CONTENT" ]; then
+            key_path="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
+            printf '%s' "$APPLE_API_KEY_CONTENT" > "$key_path"
+            chmod 600 "$key_path"
+            {
+              echo "APPLE_API_KEY=$APPLE_API_KEY"
+              echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
+              echo "APPLE_API_KEY_PATH=$key_path"
+            } >> "$GITHUB_ENV"
+            echo "Signing with a Developer ID and notarizing with an App Store Connect API key."
+          else
+            echo "Signing with a Developer ID without notarization."
+          fi
+
+      - name: Package
+        id: package
+        run: |
+          tools/package_macos.sh build-release/out "$VERSION" dist | tee "$RUNNER_TEMP/package.log"
+          grep '^signed=' "$RUNNER_TEMP/package.log" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        env:
+          SIGNED: ${{ steps.package.outputs.signed }}
+          NOTARIZED: ${{ steps.package.outputs.notarized }}
+        run: |
+          awk -v version="$VERSION" '
+            $0 ~ "^## " version " " { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "### Download"
+            echo
+            echo "\`TopEnd-$VERSION-macOS-arm64.dmg\` contains the AUv2, VST3 and CLAP plugins for"
+            echo "Apple Silicon Macs (macOS 11 or newer). Copy them to"
+            echo "\`~/Library/Audio/Plug-Ins/Components\`, \`VST3\` and \`CLAP\`, then rescan in your host."
+            echo "Verify the download against \`SHA256SUMS.txt\`."
+            echo
+            if [ "$NOTARIZED" = "true" ]; then
+              echo "The plugins and the disk image are signed with a Developer ID and notarized by Apple."
+            elif [ "$SIGNED" = "true" ]; then
+              echo "The plugins are signed with a Developer ID but not notarized."
+            else
+              echo "The plugins are not signed with a Developer ID. If macOS blocks them, run"
+              echo "\`xattr -dr com.apple.quarantine\` on the installed bundles."
+            fi
+          } >> notes.md
+          cat notes.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/SHA256SUMS.txt \
+            --title "TopEnd $VERSION" --notes-file notes.md --verify-tag
+
+      - name: Remove signing keychain
+        if: always()
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN"; fi
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8

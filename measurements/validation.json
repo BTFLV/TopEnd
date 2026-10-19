@@ -1,0 +1,39 @@
+[
+  {
+    "test": "dsp",
+    "exit_code": 0,
+    "passed": true
+  },
+  {
+    "test": "auval",
+    "exit_code": 0,
+    "passed": true
+  },
+  {
+    "test": "vst3-sdk",
+    "exit_code": 0,
+    "passed": true,
+    "passed_count": 47,
+    "failed_count": 0
+  },
+  {
+    "test": "clap",
+    "exit_code": 0,
+    "passed": true,
+    "run": 44,
+    "passed_count": 36,
+    "failed_count": 0,
+    "warnings": 0,
+    "skipped": 8
+  },
+  {
+    "test": "pluginval-vst3",
+    "exit_code": 0,
+    "passed": true
+  },
+  {
+    "test": "pluginval-au",
+    "exit_code": 0,
+    "passed": true
+  }
+]

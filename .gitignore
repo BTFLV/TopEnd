@@ -1,0 +1,11 @@
+/build*/
+/.venv*/
+/measurements/raw/
+/measurements/local/
+/measurements/**/*.f32
+/measurements/**/*.wav
+/.DS_Store
+*.pyc
+__pycache__/
+/external/iPlug2/Dependencies/Build/
+

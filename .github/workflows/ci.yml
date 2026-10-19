@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-validate:
+    name: Build, test and validate (macOS, Apple Silicon)
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: brew install ninja
+
+      - name: Connect pinned SDKs
+        run: python3 tools/bootstrap.py
+
+      - name: Build and test the DSP core
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: Build AUv2, VST3 and CLAP
+        run: |
+          cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DTOPEND_BUILD_PLUGINS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build-release
+
+      - name: Validate plugins
+        run: |
+          python3 tools/fetch_validators.py
+          cmake -S tools/validators -B build-validator-local -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-validator-local --target validator
+          python3 tools/install.py --build build-release/out
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          python3 tools/validate.py --build build-release
+
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: validation-logs
+          path: |
+            build/*-validation.log
+            measurements/validation.json
+          if-no-files-found: ignore

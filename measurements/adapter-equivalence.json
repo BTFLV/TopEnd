@@ -1,0 +1,34 @@
+{
+  "rate": 48000,
+  "channels": 2,
+  "block": 127,
+  "mid": 35,
+  "high": 50,
+  "trim_db": -3,
+  "input": "3 s generated stereo, signal from the first frame",
+  "results": [
+    {
+      "format": "clap",
+      "reference": "core",
+      "maximum_absolute_error": 0.0,
+      "relative_residual": 0.0,
+      "sample_exact": true
+    },
+    {
+      "format": "au",
+      "reference": "core",
+      "maximum_absolute_error": 0.0,
+      "relative_residual": 0.0,
+      "sample_exact": true
+    },
+    {
+      "format": "au-host-bypass",
+      "reference": "core-bypass",
+      "maximum_absolute_error": 0.0,
+      "relative_residual": 0.0,
+      "sample_exact": true
+    }
+  ],
+  "au_host_bypass_exact_from_frame": 1023,
+  "au_host_bypass_exact_until_unbypass": true
+}
