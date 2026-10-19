@@ -42,7 +42,7 @@ if(NOT IPLUG2_VST3_SUPPORTED OR NOT IPLUG2_CLAP_SUPPORTED)
 endif()
 iplug_add_plugin(TopEnd
   SOURCES TopEnd.cpp TopEnd.h config.h ../gui/Controls.h ../gui/Theme.h
-  RESOURCES ${PROJECT_SOURCE_DIR}/assets/branding/topend-logo.png
+  RESOURCES ${PROJECT_SOURCE_DIR}/assets/branding/topend-icon.png
             ${PROJECT_SOURCE_DIR}/assets/fonts/Lato-Regular.ttf
             ${PROJECT_SOURCE_DIR}/assets/fonts/Lato-Bold.ttf
             ${PROJECT_SOURCE_DIR}/assets/fonts/OFL.txt

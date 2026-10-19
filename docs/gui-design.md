@@ -3,8 +3,8 @@
 The editor is a compact 600 × 360 logical-pixel vector interface, scaled by
 IGraphics for Retina and resizable from 480 × 288 to 1200 × 720 with the corner
 handle. It uses a dark blue-grey palette with amber for Mid Air and mint for High
-Air, Lato Regular and Bold (SIL OFL 1.1), and the TopEnd logo at 32 logical
-pixels. Theme tokens live in `src/gui/Theme.h`, controls in `src/gui/Controls.h`
+Air, Lato Regular and Bold (SIL OFL 1.1), and the TopEnd icon
+(`assets/branding/topend-icon.svg`, a lifting response curve) in the header. Theme tokens live in `src/gui/Theme.h`, controls in `src/gui/Controls.h`
 and the layout in `src/plugin/TopEnd.cpp`.
 
 ![Compact view](../assets/screenshots/compact.png)

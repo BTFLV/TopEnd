@@ -31,7 +31,7 @@ TopEnd::TopEnd(const InstanceInfo &info)
     g->EnableTooltips(true);
     g->LoadFont(kRegular, "Lato-Regular.ttf");
     g->LoadFont(kBold, "Lato-Bold.ttf");
-    g->AttachControl(new Surface(IRECT(0, 0, 600, 360), g->LoadBitmap("topend-logo.png")),
+    g->AttachControl(new Surface(IRECT(0, 0, 600, 360), g->LoadBitmap("topend-icon.png")),
                      kCtrlSurface);
     g->AttachControl(new AirKnob(IRECT(), kMidAir, kHighAir, kLink, kBypass, true, "MID AIR",
                                  "Presence  ·  3 kHz", amber),

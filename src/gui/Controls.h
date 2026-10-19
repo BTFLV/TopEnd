@@ -63,7 +63,7 @@ public:
     g.PathRect(IRECT(0, 0, 600, 2));
     g.PathFill(IPattern::CreateLinearGradient(
         0, 0, 600, 0, {{withAlpha(amber, .7f), 0.f}, {withAlpha(mint, .7f), 1.f}}));
-    g.DrawFittedBitmap(logo_, IRECT(18, 14, 50, 46));
+    g.DrawFittedBitmap(logo_, IRECT(14, 10, 54, 50)); // Icon art leaves room for its shadow.
     g.DrawText(text(20, ink, EAlign::Near, kBold), "TopEnd", IRECT(60, 12, 260, 34));
     g.DrawText(text(10, muted, EAlign::Near), "Dynamic presence & air", IRECT(61, 32, 300, 46));
     g.DrawLine(cardEdge, 18, 58, 582, 58);

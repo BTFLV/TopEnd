@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/topend-logo.png" width="112" alt="TopEnd logo">
+  <img src="assets/branding/topend-icon.svg" width="128" alt="TopEnd icon">
 </p>
 
 <h1 align="center">TopEnd</h1>
