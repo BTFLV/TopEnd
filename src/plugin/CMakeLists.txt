@@ -51,6 +51,12 @@ iplug_add_plugin(TopEnd
   LINK topend-dsp
   DEFINES SAMPLE_TYPE_FLOAT
 )
+if(WIN32)
+  configure_file(resources/windows.rc.in windows.rc @ONLY)
+  foreach(api vst3 clap)
+    target_sources(TopEnd-${api} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/windows.rc")
+  endforeach()
+endif()
 if(TOPEND_ENABLE_GUI_CAPTURE)
   foreach(api vst3 clap au)
     target_compile_definitions(TopEnd-${api} PRIVATE TOPEND_ENABLE_GUI_CAPTURE)
