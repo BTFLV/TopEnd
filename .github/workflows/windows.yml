@@ -1,0 +1,48 @@
+name: Windows x64
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Connect pinned SDKs
+        run: python tools/bootstrap.py
+
+      - name: Configure Windows x64
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DTOPEND_BUILD_PLUGINS=ON
+
+      - name: Build VST3, CLAP and DSP tests
+        run: cmake --build build --config Release --target TopEnd-vst3 TopEnd-clap topend-dsp-tests --parallel 2
+
+      - name: Test DSP and state
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package plugins
+        run: |
+          $version = (Select-String -Path CMakeLists.txt -Pattern '^project\(TopEnd VERSION ([\d.]+)').Matches.Groups[1].Value
+          $out = 'build/out'
+          $stage = New-Item -ItemType Directory -Path package
+          $vst = "$stage/TopEnd.vst3/Contents/x86_64-win"
+          New-Item -ItemType Directory -Path $vst | Out-Null
+          Copy-Item "$out/TopEnd.vst3/Contents/x86_64-win/TopEnd.vst3" $vst
+          Copy-Item "$out/TopEnd.clap",LICENSE,assets/THIRD_PARTY_NOTICES.txt,assets/fonts/OFL.txt $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath "TopEnd-$version-Windows-x64.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TopEnd-Windows-x64
+          path: TopEnd-*-Windows-x64.zip
+          if-no-files-found: error

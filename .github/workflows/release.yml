@@ -11,7 +11,13 @@ concurrency:
   group: release-${{ github.ref }}
 
 jobs:
+  windows:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/windows.yml
+
   release:
+    needs: windows
     name: Build and publish (macOS, Apple Silicon)
     runs-on: macos-15
     timeout-minutes: 90
@@ -101,6 +107,15 @@ jobs:
           tools/package_macos.sh build-release/out "$VERSION" dist | tee "$RUNNER_TEMP/package.log"
           grep '^signed=' "$RUNNER_TEMP/package.log" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: TopEnd-Windows-x64
+          path: dist
+
+      - name: Checksum Windows archive
+        working-directory: dist
+        run: shasum -a 256 "TopEnd-$VERSION-Windows-x64.zip" >> SHA256SUMS.txt
+
       - name: Write release notes
         env:
           SIGNED: ${{ steps.package.outputs.signed }}
@@ -118,6 +133,7 @@ jobs:
             echo "\`TopEnd-$VERSION-macOS-arm64.dmg\` contains the AUv2, VST3 and CLAP plugins for"
             echo "Apple Silicon Macs (macOS 11 or newer). Copy them to"
             echo "\`~/Library/Audio/Plug-Ins/Components\`, \`VST3\` and \`CLAP\`, then rescan in your host."
+            echo "The Windows x64 ZIP contains the VST3 and CLAP plugins."
             echo "Verify the download against \`SHA256SUMS.txt\`."
             echo
             if [ "$NOTARIZED" = "true" ]; then
@@ -137,10 +153,10 @@ jobs:
         run: |
           # A re-pushed tag refreshes the existing release instead of failing.
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.dmg dist/SHA256SUMS.txt --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt --clobber
             gh release edit "$GITHUB_REF_NAME" --title "TopEnd $VERSION" --notes-file notes.md
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/SHA256SUMS.txt \
+            gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt \
               --title "TopEnd $VERSION" --notes-file notes.md --verify-tag
           fi
 

@@ -48,7 +48,11 @@ Copy them into your plugin folders and rescan in your host:
 | `TopEnd.vst3` | `~/Library/Audio/Plug-Ins/VST3` |
 | `TopEnd.clap` | `~/Library/Audio/Plug-Ins/CLAP` |
 
-Release builds are signed with a Developer ID and notarized by Apple when the
+For Windows x64, extract the Windows ZIP from the build artifacts or release.
+Copy the entire `TopEnd.vst3` folder to `%CommonProgramFiles%\VST3` and
+`TopEnd.clap` to `%CommonProgramFiles%\CLAP`, then rescan in your host.
+
+macOS release builds are signed with a Developer ID and notarized by Apple when the
 release pipeline has signing credentials; each release states which applies.
 
 ## The sound

@@ -14,6 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+
   build-and-validate:
     name: Build, test and validate (macOS, Apple Silicon)
     runs-on: macos-15
