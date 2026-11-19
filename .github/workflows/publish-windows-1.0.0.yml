@@ -1,0 +1,35 @@
+name: Publish Windows package for v1.0.0
+on:
+  push:
+    branches: [release/backfill-v1.0.0-windows]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: BTFLV/TopEnd
+    steps:
+      - name: Verify merged CI artifact and attach Windows package
+        run: |
+          set -euo pipefail
+          gh api repos/BTFLV/TopEnd/actions/artifacts/14565669816/zip > artifact.zip
+          echo '5321d7188752b7d324d436e205bee088b0b400deb8c3063fa890eea6f9a53542  artifact.zip' | sha256sum -c -
+          file=TopEnd-1.0.0-Windows-x64.zip
+          unzip artifact.zip "$file"
+          unzip -t "$file"
+          unzip -Z1 "$file" | tr '\\' '/' > contents.txt
+          grep -Fx 'TopEnd.vst3/Contents/x86_64-win/TopEnd.vst3' contents.txt
+          grep -Fx 'TopEnd.clap' contents.txt
+          sha256sum "$file" > "$file.sha256"
+          gh release upload v1.0.0 "$file" "$file.sha256"
+          gh release view v1.0.0 --json body --jq '.body' > notes.md
+          cat >> notes.md <<'NOTES'
+
+          ### Windows x64
+
+          Download `TopEnd-1.0.0-Windows-x64.zip` for VST3 and CLAP. Copy the complete `TopEnd.vst3` folder to `%CommonProgramFiles%\VST3` and `TopEnd.clap` to `%CommonProgramFiles%\CLAP`, then rescan in your host. The matching `.zip.sha256` file contains the Windows download checksum.
+          NOTES
+          gh release edit v1.0.0 --notes-file notes.md
